@@ -74,13 +74,14 @@ public:
 	MatrixXu F;
 	Matrix3Xf V;
 	Matrix3Xf N;
-	Matrix3Xuc C;
+	Matrix3Xus Clab;
+	Matrix3Xuc Crgb;
 
 private:
 	void Enable(int openingFileMask);
 	void updateDataMask(int openingFileMask);
 	void load_ply(const std::string &filename, MatrixXu &F, Matrix3Xf &V,
-		Matrix3Xf &N, Matrix3Xuc &C, bool pointcloud);
+		Matrix3Xf &N, Matrix3Xus &Clab, Matrix3Xuc & Crgb, bool pointcloud);
 };
 
 extern "C" {
@@ -96,6 +97,7 @@ extern "C" {
 	__declspec(dllexport) float* GetPlyNormals(PlyFileObject* plyFile, unsigned int& count);
 
 	__declspec(dllexport) unsigned char* GetPlyColors(PlyFileObject* plyFile, unsigned int& count);
+	__declspec(dllexport) unsigned short* GetPlyLABColors(PlyFileObject* plyFile, unsigned int& count);
 
 	__declspec(dllexport) unsigned int* GetPlyIndexs(PlyFileObject* plyFile, unsigned int& count);
 

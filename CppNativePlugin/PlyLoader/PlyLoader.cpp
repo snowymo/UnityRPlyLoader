@@ -131,7 +131,7 @@ inline bool CompareVertex(const CMeshO & m, const CMeshO::VertexType & vA, const
 
 PlyFileObject::PlyFileObject(const char* fileName, int downsample)
 {
-	load_ply(fileName, F, V, N, C, true);
+	load_ply(fileName, F, V, N, Clab, Crgb, true);
 }
 
 void PlyFileObject::Enable(int openingFileMask)
@@ -187,7 +187,7 @@ void PlyFileObject::updateDataMask(int neededDataMask)
 		cm.vert.EnableTexCoord();
 }
 
-void PlyFileObject::load_ply(const std::string &filename, MatrixXu &F, Matrix3Xf &V, Matrix3Xf &N, Matrix3Xuc &C, bool pointcloud)
+void PlyFileObject::load_ply(const std::string &filename, MatrixXu &F, Matrix3Xf &V, Matrix3Xf &N, Matrix3Xus &Clab, Matrix3Xuc & Crgb, bool pointcloud)
 {
 	auto message_cb = [](p_ply ply, const char *msg) { std::cerr << "rply: " << msg << std::endl; };
 
@@ -248,7 +248,8 @@ void PlyFileObject::load_ply(const std::string &filename, MatrixXu &F, Matrix3Xf
 	F.resize(3, faceCount);
 	V.resize(3, vertexCount);
 	N.resize(3, hasNormals ? vertexCount : 0);
-	C.resize(3, hasColor ? vertexCount : 0);
+	Clab.resize(3, hasColor ? vertexCount : 0);
+	
 	Eigen::Matrix<float, 2, Eigen::Dynamic> uv(2, hasUv ? vertexCount : 0);
 
 
@@ -277,8 +278,8 @@ void PlyFileObject::load_ply(const std::string &filename, MatrixXu &F, Matrix3Xf
 	};
 
 	struct VertexColorCallbackData {
-		Eigen::Matrix<unsigned char, 3, Eigen::Dynamic> &c;
-		VertexColorCallbackData(Eigen::Matrix<unsigned char, 3, Eigen::Dynamic> &c)
+		Eigen::Matrix<unsigned short, 3, Eigen::Dynamic> &c;
+		VertexColorCallbackData(Eigen::Matrix<unsigned short, 3, Eigen::Dynamic> &c)
 			: c(c) { }
 	};
 
@@ -338,7 +339,7 @@ void PlyFileObject::load_ply(const std::string &filename, MatrixXu &F, Matrix3Xf
 	FaceCallbackData fcbData(F);
 	VertexNormalCallbackData vncbData(N);
 	VertexUVCallbackData vuvcbData(uv);
-	VertexColorCallbackData vcData(C);
+	VertexColorCallbackData vcData(Clab);
 
 	ply_set_read_cb(ply, "vertex", "x", rply_vertex_cb, &vcbData, 0);
 	ply_set_read_cb(ply, "vertex", "y", rply_vertex_cb, &vcbData, 1);
@@ -381,7 +382,7 @@ void PlyFileObject::load_ply(const std::string &filename, MatrixXu &F, Matrix3Xf
 		if (file_exists(texturePath))
 		{
 			std::cout << "loading texture .. ";
-			C.resizeLike(V);
+			Clab.resizeLike(V);
 			using handleType = std::unique_ptr<uint8_t[], void(*)(void*)>;
 			int w, h, n;
 			handleType textureData(stbi_load(texturePath.c_str(), &w, &h, &n, 3), stbi_image_free);
@@ -403,10 +404,10 @@ void PlyFileObject::load_ply(const std::string &filename, MatrixXu &F, Matrix3Xf
 
 					//Gamma de-correction
 
-					C.col(i) <<
-						(unsigned char)(std::pow((float)textureData.get()[offset + 0] / 255.0f, gamma) * 255.0f),
-						(unsigned char)(std::pow((float)textureData.get()[offset + 1] / 255.0f, gamma) * 255.0f),
-						(unsigned char)(std::pow((float)textureData.get()[offset + 2] / 255.0f, gamma) * 255.0f);
+					Clab.col(i) <<
+						(unsigned char)(std::pow((float)textureData.get()[offset + 0] / 255.0f, gamma) * 65535.0f),
+						(unsigned char)(std::pow((float)textureData.get()[offset + 1] / 255.0f, gamma) * 65535.0f),
+						(unsigned char)(std::pow((float)textureData.get()[offset + 2] / 255.0f, gamma) * 65535.0f);
 // 					if (i % 100 == 0) {
 // 						std::cout << "i:" << i << "\tcolor\t" << C.col(i) << "\t" << (int)C(0,i) << "\n";
 // 							}
@@ -416,21 +417,25 @@ void PlyFileObject::load_ply(const std::string &filename, MatrixXu &F, Matrix3Xf
 		}
 
 	}
-
-// #pragma omp parallel for
-// 	for (int i = 0; i < C.cols(); ++i)
-// 	{
-// 		// i prefer rgb than lab
-// 		/*C.col(i) = RGBToLab(C.col(i));*/
-// 		C.col(i) /= 256;
+	Crgb.resize(3, Clab.cols());
+#pragma omp parallel for
+	for (int i = 0; i < Clab.cols(); ++i)
+	{
+		for (int j = 0; j < 3; j++)
+			Crgb(j, i) = (unsigned char)(Clab(j, i) / 255);
+		// i prefer rgb than lab
+		Clab.col(i) = RGBToLab(Clab.col(i));
+		
 // 		if (i % 100 == 0)
 // 			std::cout << "i:" << i << "\tcolor\t" << C.col(i) << "\n";
-// 	}
+	}
 
 	std::cout << "done. (V=" << vertexCount;
 	if (faceCount > 0)
 		std::cout << ", F=" << faceCount;
 }
+
+
 
 __declspec(dllexport) PlyFileObject* LoadPly(const char* fileName)
 {
@@ -470,8 +475,8 @@ __declspec(dllexport) unsigned char* GetPlyColors(PlyFileObject* plyFile, unsign
 	if (plyFile == NULL)
 		return NULL;
 
-	count = (unsigned int)(plyFile->C).cols();
-	return (plyFile->C).data();
+	count = (unsigned int)(plyFile->Crgb).cols();
+	return (plyFile->Crgb).data();
 }
 
 __declspec(dllexport) unsigned int* GetPlyIndexs(PlyFileObject* plyFile, unsigned int& count)
@@ -498,4 +503,13 @@ __declspec(dllexport) const char* GetPlyTextureName(PlyFileObject* plyFile)
 		return NULL;
 
 	return plyFile->textureName.c_str();
+}
+
+unsigned short* GetPlyLABColors(PlyFileObject* plyFile, unsigned int& count)
+{
+	if (plyFile == NULL)
+		return NULL;
+
+	count = (unsigned int)(plyFile->Clab).cols();
+	return (plyFile->Clab).data();
 }
