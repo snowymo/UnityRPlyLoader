@@ -2,7 +2,7 @@
 
 int main() {
 
-	PlyFileObject* test = LoadPly("C:\\Scans\\currentScan.ply");
+	PlyFileObject* test = LoadPly("D:\\Scans\\currentScan.ply");
 
 	unsigned int vCnt = 0;
 	float* verts = new float[vCnt * 3];
@@ -11,6 +11,9 @@ int main() {
 	unsigned int cCnt = 0;
 	unsigned char* colors = new unsigned char[cCnt * 3];
 	colors = GetPlyColors(test, cCnt);
+
+	unsigned short* colorsLAB = new unsigned short[cCnt * 3];
+	colorsLAB = GetPlyLABColors(test, cCnt);
 
 	unsigned int iCnt = 0;
 	unsigned int* faces = new unsigned int[iCnt * 3];

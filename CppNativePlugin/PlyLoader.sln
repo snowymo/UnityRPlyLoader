@@ -6,6 +6,9 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PlyLoader", "PlyLoader.vcxproj", "{D46D46AE-8384-432B-9A99-205B2117A497}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TestPlyLoader", "TestPlyLoader\TestPlyLoader.vcxproj", "{D533D1BD-9309-45E4-BEDA-D89725B96631}"
+	ProjectSection(ProjectDependencies) = postProject
+		{D46D46AE-8384-432B-9A99-205B2117A497} = {D46D46AE-8384-432B-9A99-205B2117A497}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

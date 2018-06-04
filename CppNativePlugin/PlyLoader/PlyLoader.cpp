@@ -405,9 +405,9 @@ void PlyFileObject::load_ply(const std::string &filename, MatrixXu &F, Matrix3Xf
 					//Gamma de-correction
 
 					Clab.col(i) <<
-						(unsigned char)(std::pow((float)textureData.get()[offset + 0] / 255.0f, gamma) * 65535.0f),
-						(unsigned char)(std::pow((float)textureData.get()[offset + 1] / 255.0f, gamma) * 65535.0f),
-						(unsigned char)(std::pow((float)textureData.get()[offset + 2] / 255.0f, gamma) * 65535.0f);
+						(unsigned short)(std::pow((float)textureData.get()[offset + 0] / 255.0f, gamma) * 65535.0f),
+						(unsigned short)(std::pow((float)textureData.get()[offset + 1] / 255.0f, gamma) * 65535.0f),
+						(unsigned short)(std::pow((float)textureData.get()[offset + 2] / 255.0f, gamma) * 65535.0f);
 // 					if (i % 100 == 0) {
 // 						std::cout << "i:" << i << "\tcolor\t" << C.col(i) << "\t" << (int)C(0,i) << "\n";
 // 							}
@@ -421,13 +421,15 @@ void PlyFileObject::load_ply(const std::string &filename, MatrixXu &F, Matrix3Xf
 #pragma omp parallel for
 	for (int i = 0; i < Clab.cols(); ++i)
 	{
+		if (i % 100000 == 0)
+			std::cout << "i:" << i << "\tcolor\t" << Crgb.col(i) << "\n";
+
 		for (int j = 0; j < 3; j++)
-			Crgb(j, i) = (unsigned char)(Clab(j, i) / 255);
+			Crgb(j, i) = (unsigned char)(Clab(j, i) / 256.0f);
 		// i prefer rgb than lab
 		Clab.col(i) = RGBToLab(Clab.col(i));
 		
-// 		if (i % 100 == 0)
-// 			std::cout << "i:" << i << "\tcolor\t" << C.col(i) << "\n";
+ 		
 	}
 
 	std::cout << "done. (V=" << vertexCount;
